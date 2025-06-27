@@ -1,16 +1,23 @@
 from pathlib import Path
 
+from calmlib.utils import setup_logger, LogMode #, heartbeat_for_sync
+from dotenv import load_dotenv
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from calmlib.utils import setup_logger, heartbeat_for_sync
-from dotenv import load_dotenv
 from loguru import logger
 
-from src._app import App
+from src.app import App, PosterBotUser
 from src.router import router as main_router
 from src.routers.settings import router as settings_router
 from botspot.core.bot_manager import BotManager
+
+
+async def on_startup(dispatcher):
+    app = dispatcher["app"]
+    await app.schedule_posts_on_startup()
+
 
 
 # @heartbeat_for_sync(App.name)
@@ -37,10 +44,12 @@ def main(debug=False) -> None:
         error_handler={"enabled": True},
         ask_user={"enabled": True},
         bot_commands_menu={"enabled": True},
+         user_class=PosterBotUser,
     )
 
     # Setup dispatcher with our components
     bm.setup_dispatcher(dp)
+    dp.startup.register(on_startup)
 
     # Start polling
     dp.run_polling(bot)

@@ -1,6 +1,6 @@
 [project]
-name = "project-name"
-version = "0.0.1"
+name = "poster-bot"
+version = "0.1.0"
 description = ""
 readme = "README.md"
 authors = [
@@ -9,7 +9,7 @@ authors = [
 requires-python = "<4.0,>=3.12"
 dependencies = [
     "calmlib @ git+https://github.com/calmmage/calmlib.git@main",
-    "botspot @ git+https://github.com/calmmage/botspot.git@main",
+    "botspot @ git+https://github.com/calmmage/botspot.git@main", # v0.10.25
     "loguru>=0.7",
     "toml>=0.10",
     "python-dotenv",
@@ -21,6 +21,7 @@ dependencies = [
     "langchain-openai",
     "langchain-community",
     "langchain-anthropic",
+    "croniter>=6.0.0",
 ]
 
 [build-system]
