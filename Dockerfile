@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl git && \
     rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir uv
 COPY . .
 
 # Install dependencies with uv sync, including specified groups
-RUN uv sync --group main --group extras
+RUN uv sync --group extras
 
 # Run the bot
 CMD ["uv", "run", "python", "run.py"]
