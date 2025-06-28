@@ -10,6 +10,7 @@ from croniter import croniter
 from botspot.utils import send_safe
 from loguru import logger
 from botspot.components.data.user_data import User
+import random
 
 
 class SchedulingMode(Enum):
@@ -208,18 +209,19 @@ class App:
         Pick a post from the queue for a user.
         """
         logger.debug(f"_pick_post_from_queue called with user_id={user_id}")
-        # todo: implement a special method that picks the item to be posted
-        #  a) just random
-        #  b) make sure post is ready (for this channel - for when we add multiple channels)
-        #  c) make sure post is not already posted (to this channel - for when we add multiple channels)
-
         all_posts = await self.queue.get_items(user_id=user_id)
         if not all_posts:
             logger.info(f"No posts in queue for user {user_id}")
             return None
 
-        # todo: pick a post from the queue
-        return all_posts[0]
+        # todo: implement a special method that picks the item to be posted
+        #  make sure post is ready - not an unfinished draft (for this channel - for when we add multiple channels)
+        non_posted = [item for item in all_posts if not item.posted]
+        if not non_posted:
+            logger.info(f"No non-posted items in queue for user {user_id}")
+            return None
+
+        return random.choice(non_posted)
 
     async def activate_user(self, user_id: int):
         """
