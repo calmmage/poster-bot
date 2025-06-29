@@ -70,7 +70,7 @@ class PosterBotQueueItem(QueueItem):
     posted: bool = False
     posted_channel_id: Optional[int] = None
     posted_at: Optional[datetime] = None
-    # todo: readiness - enum
+    readiness: Readiness = Readiness.DRAFT
     # todo: topic(s) - set of enums
 
 
@@ -104,11 +104,11 @@ class App:
             self._scheduler = get_scheduler()
         return self._scheduler
 
-    async def add_to_queue(self, text: str, user_id: int):
-        logger.debug(f"Adding to queue: user_id={user_id}, text={text!r}")
-        item = PosterBotQueueItem(data=text)
-        await self.queue.add_item(item, user_id=user_id)
-        logger.debug(f"Item added to queue for user_id={user_id}")
+    async def add_to_queue(self, text: str, user_id: int, readiness: Readiness = Readiness.DRAFT):
+        logger.debug(f"Adding to queue: user_id={user_id}, text={text!r}, readiness={readiness}")
+        item = PosterBotQueueItem(data=text, readiness=readiness)
+        # todo: return the item - including the id
+        return await self.queue.add_item(item, user_id=user_id)
 
     async def get_users(self) -> list[PosterBotUser]:
         from botspot.utils import get_user_manager
@@ -206,10 +206,21 @@ class App:
         all_posts = await self.queue.get_items(user_id=user_id)
         logger.debug(f"User {user_id} has {len(all_posts)} posts in queue after posting")
         remaining_posts = [item for item in all_posts if not item.posted]
-        await send_safe(
-            user_id,
-            f"Your post was sent to the channel. Remaining posts in queue: {len(remaining_posts) - 1}",
-        )
+        # Calculate stats by readiness
+        readiness_stats = {
+            Readiness.FINISHED: 0,
+            Readiness.UNPOLISHED: 0,
+            Readiness.DRAFT: 0
+        }
+        for item in remaining_posts:
+            if item.readiness in readiness_stats:
+                readiness_stats[item.readiness] += 1
+        stats_message = f"Your post was sent to the channel. Remaining posts in queue: {len(remaining_posts)}\n"
+        stats_message += "Breakdown by readiness:\n"
+        stats_message += f"- Finished: {readiness_stats[Readiness.FINISHED]}\n"
+        stats_message += f"- Unpolished: {readiness_stats[Readiness.UNPOLISHED]}\n"
+        stats_message += f"- Draft: {readiness_stats[Readiness.DRAFT]}"
+        await send_safe(user_id, stats_message)
 
         # Mark the post as posted
         post.posted = True
@@ -229,15 +240,22 @@ class App:
             logger.info(f"No posts in queue for user {user_id}")
             return None
 
-        # todo: implement a special method that picks the item to be posted
-        #  make sure post is ready - not an unfinished draft (for this channel - for when we add multiple channels)
+        # Prioritize posts based on readiness: FINISHED > UNPOLISHED > DRAFT
         non_posted = [item for item in all_posts if not item.posted]
         logger.debug(f"User {user_id} has {len(non_posted)} non-posted items in queue")
         if not non_posted:
-            logger.info(f"No non-posted items in queue for user {user_id}")
+            logger.debug(f"No non-posted items in queue for user {user_id}")
             return None
 
-        chosen = random.choice(non_posted)
+        # Filter out DRAFT posts
+        eligible_posts = [item for item in non_posted if item.readiness != Readiness.DRAFT]
+        if not eligible_posts:
+            logger.debug(f"No eligible (non-DRAFT) posts in queue for user {user_id}")
+            return None
+
+        # Sort by readiness priority
+        readiness_priority = {Readiness.FINISHED: 0, Readiness.UNPOLISHED: 1, Readiness.DRAFT: 2}
+        chosen = min(eligible_posts, key=lambda x: readiness_priority.get(x.readiness, 3))
         logger.debug(f"Chose post for user_id={user_id}: {chosen}")
         return chosen
 

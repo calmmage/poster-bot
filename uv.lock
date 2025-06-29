@@ -278,8 +278,8 @@ css = [
 
 [[package]]
 name = "botspot"
-version = "0.10.26"
-source = { git = "https://github.com/calmmage/botspot.git?rev=main#8ab8249860d26244004b58317d3b3c193b53e6c3" }
+version = "0.10.28"
+source = { git = "https://github.com/calmmage/botspot.git?rev=main#4a2e5f7fa3ad12f08ab9af3b0c24f20c3c1b19a6" }
 dependencies = [
     { name = "aiogram" },
     { name = "calmlib" },
