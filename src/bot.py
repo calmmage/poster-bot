@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from calmlib.utils import setup_logger, LogMode #, heartbeat_for_sync
+from calmlib.utils import setup_logger, LogFormat #, heartbeat_for_sync
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher
@@ -22,7 +22,7 @@ async def on_startup(dispatcher):
 
 # @heartbeat_for_sync(App.name)
 def main(debug=False) -> None:
-    setup_logger(logger, level="DEBUG" if debug else "INFO")
+    setup_logger(logger, format=LogFormat.DEFAULT if debug else LogFormat.DETAILED, level="DEBUG" if debug else "INFO")
 
     # Initialize bot and dispatcher
     dp = Dispatcher()
