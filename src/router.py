@@ -1,10 +1,11 @@
-from src.app import App
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
+from aiogram.types import Message
 from botspot import commands_menu
 from botspot.utils import send_safe
+
+from src.app import App
 
 router = Router()
 
@@ -48,25 +49,38 @@ async def stop_autopost_handler(message: Message, app: App):
 @router.message(F.text | F.caption)
 async def message_handler(message: Message, app: App, state: FSMContext):
     """Basic help command handler"""
+    from botspot.user_interactions import ask_user_confirmation
+
     assert message.from_user is not None
     user_id = message.from_user.id
 
     # save user message to queue
-    # todo: handle captions, media etc.
-    await app.add_to_queue(message.html_text, user_id)
-    # todo: add confirmation before adding to queue
-    from botspot.user_interactions import ask_user_confirmation
-    confirmed = await ask_user_confirmation(message.chat.id, "Are you sure you want to add this to queue?", state=state)
+    # todo: handle captions, media etc. 
+    # todo: for now, add 'forwarding' mode for media-based posts
+    post_content = await app.prepare_post_content(message)
+
+    preview = f"<b>Preview:</b>\n{post_content}\n\nAre you sure you want to add this to queue?"
+    confirmed = await ask_user_confirmation(
+        message.chat.id,
+        preview,
+        state=state,
+        parse_mode="HTML", 
+        cleanup=True,
+    )
     if not confirmed:
         await send_safe(message.chat.id, "Cancelled.")
         return
+    
+    await app.add_to_queue(post_content, user_id)
 
     # todo: add alternative mode of saving: forwarding
-    total_queue_items = await app.queue.get_items(user_id=user_id)
-
+    queue_items = await app.queue.get_items(user_id=user_id)
     # todo: add better stats
-    # 1) ...
-    # 2) counts per readiness state
+    # counts per readiness state
+    unposted_items = [item for item in queue_items if not item.posted]
+
     await send_safe(
-        message.chat.id, f"Saved to queue. Currenlty in queue: {len(total_queue_items)}"
+        message.chat.id,
+        f"Saved to queue. Currently in queue: {len(unposted_items)}\n\n<b>Preview:</b>\n{post_content}",
+        parse_mode="HTML"
     )

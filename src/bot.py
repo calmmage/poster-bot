@@ -1,17 +1,16 @@
 from pathlib import Path
 
-from calmlib.utils import setup_logger, LogFormat #, heartbeat_for_sync
-from dotenv import load_dotenv
-
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from botspot.core.bot_manager import BotManager
+from calmlib.utils import LogFormat, setup_logger  # , heartbeat_for_sync
+from dotenv import load_dotenv
 from loguru import logger
 
 from src.app import App, PosterBotUser
 from src.router import router as main_router
 from src.routers.settings import router as settings_router
-from botspot.core.bot_manager import BotManager
 
 
 async def on_startup(dispatcher):

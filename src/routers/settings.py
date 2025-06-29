@@ -1,7 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-
 from botspot.commands_menu import botspot_command
 from botspot.user_interactions import ask_user, ask_user_choice
 from botspot.utils import reply_safe
