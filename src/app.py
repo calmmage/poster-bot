@@ -11,12 +11,12 @@ from botspot.utils import send_safe
 from loguru import logger
 from botspot.components.data.user_data import User
 import random
+from src.utils import validate_cron_expr
 
 
 class SchedulingMode(Enum):
     PERIOD = "period"
     CRON = "cron"
-
 
 class AppConfig(BaseSettings):
     """Basic app configuration"""
@@ -33,6 +33,7 @@ class AppConfig(BaseSettings):
         env_file_encoding = "utf-8"
         extra = "ignore"
 
+
     @model_validator(mode="after")
     def check_cron_expr_if_cron(self):
         if self.scheduling_mode == SchedulingMode.CRON:
@@ -40,13 +41,13 @@ class AppConfig(BaseSettings):
                 raise ValueError(
                     "scheduling_cron_expr must be set when scheduling_mode is CRON"
                 )
-            # Validate cron expression
-            try:
-                croniter(self.scheduling_cron_expr)
-            except Exception as e:
-                raise ValueError(
-                    f"Invalid cron expression: {self.scheduling_cron_expr}. Error: {e}"
+            if isinstance(self.scheduling_cron_expr, list):
+                logger.warning(
+                    f"'{self.scheduling_cron_expr=}' is a list, converting to string."
                 )
+                self.scheduling_cron_expr = " ".join(self.scheduling_cron_expr)
+            # Validate cron expression
+            validate_cron_expr(self.scheduling_cron_expr)
         return self
 
 
