@@ -5,7 +5,7 @@ from aiogram.types import Message
 from botspot import commands_menu
 from botspot.utils import send_safe
 
-from src.app import App
+from src.app import App, Readiness
 
 router = Router()
 
@@ -49,7 +49,7 @@ async def stop_autopost_handler(message: Message, app: App):
 @router.message(F.text | F.caption)
 async def message_handler(message: Message, app: App, state: FSMContext):
     """Basic help command handler"""
-    from botspot.user_interactions import ask_user_confirmation
+    from botspot.user_interactions import ask_user_choice
 
     assert message.from_user is not None
     user_id = message.from_user.id
@@ -59,19 +59,35 @@ async def message_handler(message: Message, app: App, state: FSMContext):
     # todo: for now, add 'forwarding' mode for media-based posts
     post_content = await app.prepare_post_content(message)
 
-    preview = f"<b>Preview:</b>\n{post_content}\n\nAre you sure you want to add this to queue?"
-    confirmed = await ask_user_confirmation(
+    # todo: move to prepare_post_content?
+    # title = app._get_post_title(post_content)
+
+    preview = f"Adding new post to queue. Preview:\n'''\n{post_content}\n'''\nHow ready is this post?"
+    choices = {
+        "finished": "Finished",
+        "unpolished": "Unpolished",
+        "draft": "Draft",
+        "cancel": "Cancel"
+    }
+    choice = await ask_user_choice(
         message.chat.id,
         preview,
+        choices=choices,
+        default_choice="draft",
         state=state,
         parse_mode="HTML", 
         cleanup=True,
     )
-    if not confirmed:
+    if choice == "cancel" or choice is None:
         await send_safe(message.chat.id, "Cancelled.")
         return
-    
-    await app.add_to_queue(post_content, user_id)
+    readiness_map = {
+        "finished": Readiness.FINISHED,
+        "unpolished": Readiness.UNPOLISHED,
+        "draft": Readiness.DRAFT
+    }
+    readiness = readiness_map[choice]
+    await app.add_to_queue(post_content, user_id, readiness=readiness)
 
     # todo: add alternative mode of saving: forwarding
     queue_items = await app.queue.get_items(user_id=user_id)
@@ -79,8 +95,11 @@ async def message_handler(message: Message, app: App, state: FSMContext):
     # counts per readiness state
     unposted_items = [item for item in queue_items if not item.posted]
 
+    # todo: Format this message better, add utils
+    # - util to get queue stats - here and in app.py send_to_channel
+    # - util to format post preview - here and above
     await send_safe(
         message.chat.id,
-        f"Saved to queue. Currently in queue: {len(unposted_items)}\n\n<b>Preview:</b>\n{post_content}",
+        f"Saved to queue as {choice}. Currently in queue: {len(unposted_items)}. Preview:</b>\n{post_content}\n\nReadiness: {readiness.value}",
         parse_mode="HTML"
     )
