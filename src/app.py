@@ -81,7 +81,7 @@ class PosterBotUser(User):
 
 
 class App:
-    name = "Poster Prototype Bot"
+    name = "Channel Poster Bot"
 
     def __init__(self, **kwargs):
         self.config = AppConfig(**kwargs)
